@@ -1,0 +1,18 @@
+{
+  "name": "Dividend Tracker Pro",
+  "short_name": "Dividendes",
+  "description": "Suivi de portefeuille d'actions, dividendes et rentes passives",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0b1120",
+  "theme_color": "#059669",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "512x512 192x192 128x128 64x64",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

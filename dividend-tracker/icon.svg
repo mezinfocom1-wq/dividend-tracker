@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#064e3b"/>
+      <stop offset="50%" stop-color="#047857"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399"/>
+      <stop offset="100%" stop-color="#10b981"/>
+    </linearGradient>
+  </defs>
+  <!-- Background Rounded Rect -->
+  <rect width="512" height="512" rx="120" fill="url(#bg)"/>
+  <!-- Border -->
+  <rect x="8" y="8" width="496" height="496" rx="112" fill="none" stroke="#10b981" stroke-opacity="0.3" stroke-width="8"/>
+  <!-- Icon: Bar Chart + Trending Arrow + Currency symbol -->
+  <g transform="translate(64, 74)">
+    <!-- Base line -->
+    <path d="M 30 300 L 354 300" stroke="#334155" stroke-width="12" stroke-linecap="round"/>
+    <!-- Bars -->
+    <rect x="50" y="210" width="46" height="90" rx="8" fill="#38bdf8"/>
+    <rect x="120" y="150" width="46" height="150" rx="8" fill="#818cf8"/>
+    <rect x="190" y="90" width="46" height="210" rx="8" fill="url(#accent)"/>
+    <rect x="260" y="40" width="46" height="260" rx="8" fill="#f59e0b"/>
+    <!-- Trend Line -->
+    <path d="M 65 190 Q 150 140 213 70 T 320 20" fill="none" stroke="#ffffff" stroke-width="14" stroke-linecap="round"/>
+    <!-- Arrow Head -->
+    <polygon points="320,10 340,35 305,40" fill="#ffffff"/>
+    <!-- Coin / Dividend sparkle -->
+    <circle cx="283" cy="40" r="16" fill="#fef08a"/>
+  </g>
+</svg>

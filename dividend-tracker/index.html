@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Dividend Tracker Pro - Suivi de Portefeuille Multi-Utilisateurs</title>
+  
+  <!-- PWA Meta Tags -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0b1120">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Dividendes">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#ecfdf5',
+              100: '#d1fae5',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    /* Custom scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+
+    /* Light Mode Overrides */
+    html:not(.dark) body {
+      background-color: #f8fafc !important;
+      color: #0f172a !important;
+    }
+    html:not(.dark) #authScreen {
+      background: radial-gradient(circle at center, #f1f5f9, #e2e8f0) !important;
+    }
+    html:not(.dark) header,
+    html:not(.dark) nav {
+      background-color: rgba(255, 255, 255, 0.95) !important;
+      border-color: #cbd5e1 !important;
+    }
+    html:not(.dark) .bg-slate-900 {
+      background-color: #ffffff !important;
+      border-color: #e2e8f0 !important;
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+    }
+    html:not(.dark) .bg-slate-950,
+    html:not(.dark) .bg-slate-950\/70,
+    html:not(.dark) .bg-slate-950\/60,
+    html:not(.dark) .bg-slate-950\/80,
+    html:not(.dark) .bg-slate-950\/85,
+    html:not(.dark) .bg-slate-950\/50,
+    html:not(.dark) .bg-slate-950\/40 {
+      background-color: #f1f5f9 !important;
+      border-color: #e2e8f0 !important;
+    }
+    html:not(.dark) .bg-slate-800,
+    html:not(.dark) .bg-slate-800\/80,
+    html:not(.dark) .bg-slate-800\/40 {
+      background-color: #f8fafc !important;
+      border-color: #cbd5e1 !important;
+      color: #1e293b !important;
+    }
+    html:not(.dark) .border-slate-800,
+    html:not(.dark) .border-slate-800\/60,
+    html:not(.dark) .border-slate-700,
+    html:not(.dark) .divide-slate-800\/60 {
+      border-color: #e2e8f0 !important;
+    }
+    html:not(.dark) .text-white {
+      color: #0f172a !important;
+    }
+    html:not(.dark) .text-slate-100 {
+      color: #0f172a !important;
+    }
+    html:not(.dark) .text-slate-200,
+    html:not(.dark) .text-slate-300 {
+      color: #334155 !important;
+    }
+    html:not(.dark) .text-slate-400 {
+      color: #64748b !important;
+    }
+    html:not(.dark) .text-slate-500 {
+      color: #64748b !important;
+    }
+    html:not(.dark) tfoot#tableTotalsRow {
+      background-color: #e2e8f0 !important;
+      color: #0f172a !important;
+    }
+    html:not(.dark) thead {
+      background-color: #e2e8f0 !important;
+      color: #334155 !important;
+    }
+    html:not(.dark) input,
+    html:not(.dark) select {
+      background-color: #ffffff !important;
+      color: #0f172a !important;
+      border-color: #cbd5e1 !important;
+    }
+    html:not(.dark) input::placeholder {
+      color: #94a3b8 !important;
+    }
+    html:not(.dark) footer {
+      background-color: #ffffff !important;
+      border-color: #e2e8f0 !important;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen selection:bg-emerald-500 selection:text-white flex flex-col pb-20 md:pb-6">
+
+  <!-- ==================================================== -->
+  <!-- 1. AUTH SCREEN (Visible si aucun utilisateur connecté) -->
+  <!-- ==================================================== -->
+  <div id="authScreen" class="min-h-screen flex items-center justify-center p-4 bg-radial from-slate-900 to-slate-950">
+    <div class="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
+      <!-- Logo & Title -->
+      <div class="text-center space-y-2">
+        <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center shadow-xl shadow-emerald-500/20 mx-auto">
+          <i class="fa-solid fa-chart-line text-white text-2xl"></i>
+        </div>
+        <h1 class="text-2xl font-extrabold text-white tracking-tight">
+          Dividend<span class="text-emerald-400">Tracker</span> Pro
+        </h1>
+        <p class="text-xs text-slate-400">Gérez vos dividendes et actions depuis n'importe quel appareil 24h/24</p>
+      </div>
+
+      <!-- Auth Tabs: Connexion vs Inscription -->
+      <div class="flex p-1 bg-slate-950 rounded-xl border border-slate-800 text-xs font-semibold">
+        <button id="tabLoginBtn" onclick="switchAuthTab('login')" class="flex-1 py-2 rounded-lg bg-slate-800 text-white transition shadow-sm">
+          Se Connecter
+        </button>
+        <button id="tabRegisterBtn" onclick="switchAuthTab('register')" class="flex-1 py-2 rounded-lg text-slate-400 hover:text-white transition">
+          Créer un Compte
+        </button>
+      </div>
+
+      <!-- FORM: Connexion -->
+      <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Adresse Email</label>
+          <div class="relative">
+            <i class="fa-solid fa-envelope absolute left-3 top-3 text-xs text-slate-500"></i>
+            <input type="email" id="loginEmail" required placeholder="ex: contact@exemple.com" class="w-full pl-9 pr-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          </div>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="block text-xs font-semibold text-slate-300">Mot de passe</label>
+            <button type="button" onclick="showForgotPasswordForm()" class="text-[11px] text-emerald-400 hover:text-emerald-300 transition">
+              Mot de passe oublié ?
+            </button>
+          </div>
+          <div class="relative">
+            <i class="fa-solid fa-lock absolute left-3 top-3 text-xs text-slate-500"></i>
+            <input type="password" id="loginPassword" required placeholder="••••••••" class="w-full pl-9 pr-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          </div>
+        </div>
+
+        <button type="submit" class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/30 transition flex items-center justify-center gap-2">
+          <i class="fa-solid fa-arrow-right-to-bracket"></i>
+          <span>Ouvrir mon Portefeuille</span>
+        </button>
+      </form>
+
+      <!-- FORM: Mot de passe oublié / Réinitialisation avec Code OTP -->
+      <div id="forgotPasswordContainer" class="space-y-4 hidden">
+        <div class="text-left space-y-1">
+          <h3 class="text-sm font-bold text-white flex items-center gap-1.5">
+            <i class="fa-solid fa-key text-amber-400"></i>
+            <span>Réinitialiser mon mot de passe</span>
+          </h3>
+          <p class="text-xs text-slate-400">
+            Entrez votre adresse Gmail pour recevoir votre code de réinitialisation.
+          </p>
+        </div>
+
+        <!-- Étape 1 : Saisir Email -->
+        <form id="forgotStep1Form" onsubmit="handleSendResetOtp(event)" class="space-y-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Adresse Email / Gmail *</label>
+            <div class="relative">
+              <i class="fa-solid fa-envelope absolute left-3 top-3 text-xs text-slate-500"></i>
+              <input type="email" id="forgotEmail" required placeholder="ex: votre.email@gmail.com" class="w-full pl-9 pr-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500">
+            </div>
+          </div>
+          <button type="submit" class="w-full py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shadow-lg shadow-amber-600/30 transition flex items-center justify-center gap-2">
+            <i class="fa-solid fa-paper-plane"></i>
+            <span>Envoyer le Code par Email</span>
+          </button>
+        </form>
+
+        <!-- Étape 2 : Saisir Code + Nouveau Mot de passe -->
+        <form id="forgotStep2Form" onsubmit="handleConfirmNewPassword(event)" class="space-y-3 hidden pt-2 border-t border-slate-800">
+          <div class="p-3 bg-amber-950/40 border border-amber-500/40 rounded-xl text-center space-y-0.5">
+            <span class="text-[11px] text-slate-300">Code de sécurité à 6 chiffres :</span>
+            <div class="text-2xl font-mono font-extrabold text-amber-400 tracking-widest" id="resetCodeLiveDisplay">------</div>
+            <p class="text-[10px] text-slate-400">Envoyé vers votre boîte mail. Vous pouvez le saisir directement ci-dessous.</p>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Code reçu par email (6 chiffres) *</label>
+            <input type="text" id="resetInputOtp" required maxlength="6" placeholder="ex: 123456" class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-center text-sm font-mono font-bold tracking-widest text-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Nouveau mot de passe *</label>
+            <input type="password" id="resetNewPass" required minlength="4" placeholder="••••••••" class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Confirmer nouveau mot de passe *</label>
+            <input type="password" id="resetConfirmPass" required minlength="4" placeholder="••••••••" class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          </div>
+
+          <button type="submit" class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/30 transition flex items-center justify-center gap-2">
+            <i class="fa-solid fa-lock"></i>
+            <span>Enregistrer & Ouvrir mon Portefeuille</span>
+          </button>
+        </form>
+
+        <div class="text-center pt-2">
+          <button type="button" onclick="cancelForgotPassword()" class="text-xs text-slate-400 hover:text-white transition">
+            ← Retour à la connexion
+          </button>
+        </div>
+      </div>
+
+      <!-- FORM: Inscription -->
+      <form id="registerForm" onsubmit="handleRegister(event)" class="space-y-3.5 hidden">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Nom / Pseudo *</label>
+          <input type="text" id="regName" required placeholder="ex: Mon Nom" class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Adresse Email / Gmail *</label>
+          <div class="relative">
+            <i class="fa-solid fa-envelope absolute left-3 top-3 text-xs text-slate-500"></i>
+            <input type="email" id="regEmail" required placeholder="ex: prenom.nom@gmail.com" class="w-full pl-9 pr-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Mot de passe *</label>
+            <input type="password" id="regPassword" required minlength="4" placeholder="••••••••" class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Devise Principale</label>
+            <select id="regCurrency" class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <option value="€">EUR (€)</option>
+              <option value="$">USD ($)</option>
+              <option value="DH">MAD (DH)</option>
+              <option value="CHF">CHF</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="p-3 bg-emerald-950/30 border border-emerald-800/40 rounded-xl space-y-1 text-[11px] text-emerald-300">
+          <div class="flex items-center gap-1.5 font-semibold text-emerald-400">
+            <i class="fa-solid fa-shield-halved"></i>
+            <span>Sécurité & Confidentialité</span>
+          </div>
+          <p class="text-slate-300">
+            • Mot de passe <strong>chiffré</strong> (SHA-256).<br>
+            • Un <strong>code de validation à 6 chiffres</strong> vous sera envoyé pour activer votre compte.<br>
+            • Portefeuille neuf <strong>100% vierge</strong> prêt pour vos actions.
+          </p>
+        </div>
+
+        <button type="submit" class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/30 transition flex items-center justify-center gap-2">
+          <i class="fa-solid fa-paper-plane"></i>
+          <span>Créer mon Compte & Recevoir le Code</span>
+        </button>
+      </form>
+
+    </div>
+  </div>
+
+
+  <!-- ==================================================== -->
+  <!-- 2. MAIN APP VIEW (Affiché quand l'utilisateur est connecté) -->
+  <!-- ==================================================== -->
+  <div id="mainAppView" class="hidden flex flex-col min-h-screen">
+
+    <!-- Navigation Bar -->
+    <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-30">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        
+        <!-- App Title / Logo -->
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+            <i class="fa-solid fa-chart-line text-white text-lg"></i>
+          </div>
+          <div>
+            <span class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+              Dividend<span class="text-emerald-400">Tracker</span>
+              <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Pro</span>
+            </span>
+            <p class="text-xs text-slate-400 hidden sm:block">Portefeuille d'actions & rentes passives</p>
+          </div>
+        </div>
+
+        <!-- Top Right Actions & User Profile -->
+        <div class="flex items-center gap-2 sm:gap-3">
+          
+          <!-- Theme Toggle (Light / Dark Mode) -->
+          <button id="themeToggleBtn" onclick="toggleTheme()" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-amber-400 transition" title="Basculer Mode Clair / Sombre">
+            <i id="themeIcon" class="fa-solid fa-sun"></i>
+          </button>
+
+          <!-- Devise selector -->
+          <select id="currencySelector" class="bg-slate-800 border border-slate-700 text-xs rounded-lg px-2 sm:px-2.5 py-1.5 text-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none cursor-pointer">
+            <option value="€">EUR (€)</option>
+            <option value="$">USD ($)</option>
+            <option value="DH">MAD (DH)</option>
+            <option value="CHF">CHF</option>
+          </select>
+
+          <!-- Desktop Quick Actions -->
+          <button onclick="openModal('addPositionModal')" class="hidden md:inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md shadow-emerald-600/25 transition">
+            <i class="fa-solid fa-plus"></i>
+            <span>Nouvelle Action</span>
+          </button>
+
+          <button onclick="openModal('buySharesModal')" class="hidden md:inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold shadow-md shadow-sky-600/25 transition">
+            <i class="fa-solid fa-cart-shopping"></i>
+            <span>Acheter Actions</span>
+          </button>
+
+          <button onclick="openModal('recordDividendModal')" class="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/25 transition">
+            <i class="fa-solid fa-hand-holding-dollar"></i>
+            <span>Dividende</span>
+          </button>
+
+          <!-- User Menu Dropdown -->
+          <div class="relative">
+            <button id="userMenuToggleBtn" onclick="toggleDropdown('userMenuDropdown')" class="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 transition">
+              <div id="userAvatar" class="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[11px] font-bold">
+                U
+              </div>
+              <span id="userNameDisplay" class="text-xs font-semibold max-w-[100px] truncate hidden sm:inline">Utilisateur</span>
+              <i class="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>
+            </button>
+
+            <!-- Dropdown Menu -->
+            <div id="userMenuDropdown" class="hidden absolute right-0 mt-2 w-60 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl py-2 z-40 text-xs">
+              <div class="px-4 py-2 border-b border-slate-800">
+                <p id="menuUserFullName" class="font-bold text-white truncate">-</p>
+                <p id="menuUserEmail" class="text-[11px] text-slate-400 truncate">-</p>
+              </div>
+
+              <!-- Import / Export -->
+              <div class="py-1">
+                <label class="w-full text-left px-4 py-2 hover:bg-slate-800 text-slate-300 flex items-center gap-2.5 cursor-pointer">
+                  <i class="fa-solid fa-file-csv text-emerald-400"></i>
+                  <span><strong>Importer un fichier CSV</strong></span>
+                  <input type="file" id="importCsvInput" accept=".csv" class="hidden" onchange="importPositionsCSV(event)">
+                </label>
+                <button onclick="exportPositionsCSV()" class="w-full text-left px-4 py-2 hover:bg-slate-800 text-slate-300 flex items-center gap-2.5">
+                  <i class="fa-solid fa-file-arrow-down text-emerald-400"></i> Exporter en CSV (Excel)
+                </button>
+                <button onclick="exportDataJSON()" class="w-full text-left px-4 py-2 hover:bg-slate-800 text-slate-300 flex items-center gap-2.5">
+                  <i class="fa-solid fa-download text-sky-400"></i> Sauvegarder (JSON)
+                </button>
+                <label class="w-full text-left px-4 py-2 hover:bg-slate-800 text-slate-300 flex items-center gap-2.5 cursor-pointer">
+                  <i class="fa-solid fa-upload text-amber-400"></i> Restaurer (JSON)
+                  <input type="file" id="importFileInput" accept=".json" class="hidden" onchange="importDataJSON(event)">
+                </label>
+              </div>
+
+              <!-- Compte Actions -->
+              <div class="border-t border-slate-800 pt-1">
+                <button onclick="openChangePasswordModal()" class="w-full text-left px-4 py-2 hover:bg-slate-800 text-slate-300 flex items-center gap-2.5">
+                  <i class="fa-solid fa-key text-amber-400"></i> Changer mon mot de passe
+                </button>
+                <button onclick="handleLogout()" class="w-full text-left px-4 py-2 hover:bg-slate-800 text-slate-300 flex items-center gap-2.5">
+                  <i class="fa-solid fa-users text-sky-400"></i> Changer de Compte
+                </button>
+                <button onclick="handleLogout()" class="w-full text-left px-4 py-2 hover:bg-rose-950/40 text-rose-300 font-semibold flex items-center gap-2.5">
+                  <i class="fa-solid fa-arrow-right-from-bracket"></i> Se Déconnecter
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 flex-1 w-full">
+      
+      <!-- Top KPI Cards -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+        <!-- Total Investi -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 relative overflow-hidden shadow-sm">
+          <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Investi Total</p>
+          <p id="kpiTotalInvested" class="text-lg sm:text-2xl font-bold font-mono text-white mt-1">0 €</p>
+          <p class="text-[11px] text-slate-500 mt-1"><span id="kpiTotalPositions">0</span> positions</p>
+        </div>
+
+        <!-- Revenu Annuel Estimé -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 relative overflow-hidden shadow-sm">
+          <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Revenu Annuel</p>
+          <p id="kpiAnnualIncome" class="text-lg sm:text-2xl font-bold font-mono text-emerald-400 mt-1">0 €</p>
+          <p class="text-[11px] text-emerald-500/80 mt-1"><span id="kpiMonthlyIncome">0 €</span> / mois</p>
+        </div>
+
+        <!-- Yield on Cost Moyen -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 relative overflow-hidden shadow-sm">
+          <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Yield on Cost</p>
+          <p id="kpiAverageYield" class="text-lg sm:text-2xl font-bold font-mono text-cyan-400 mt-1">0.00 %</p>
+          <p class="text-[11px] text-slate-500 mt-1">Rendement sur coût</p>
+        </div>
+
+        <!-- Déjà Reçu -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 relative overflow-hidden shadow-sm">
+          <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Reçu en 2026</p>
+          <p id="kpiTotalReceived" class="text-lg sm:text-2xl font-bold font-mono text-indigo-400 mt-1">0 €</p>
+          <div class="w-full bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden">
+            <div id="kpiProgressReceivedBar" class="bg-indigo-500 h-1.5 rounded-full" style="width: 0%"></div>
+          </div>
+        </div>
+
+        <!-- Reste À Recevoir -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 relative overflow-hidden shadow-sm">
+          <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Reste À Recevoir</p>
+          <p id="kpiPendingAmount" class="text-lg sm:text-2xl font-bold font-mono text-amber-400 mt-1">0 €</p>
+          <p class="text-[11px] text-slate-500 mt-1" id="kpiPendingPercent">0% du total</p>
+        </div>
+
+        <!-- Concentration Top 3 -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 relative overflow-hidden shadow-sm">
+          <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Top 3 Payers</p>
+          <p id="kpiTop3Share" class="text-lg sm:text-2xl font-bold font-mono text-purple-400 mt-1">0.0 %</p>
+          <p class="text-[11px] text-slate-500 mt-1 truncate" id="kpiLargestPayer">Max: -</p>
+        </div>
+      </div>
+
+      <!-- Charts Section (Dividende annuel par position & Concentration) -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Graphique 1: Dividende annuel par position (Bar Chart) -->
+        <div class="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-sm">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="text-base font-semibold text-white flex items-center gap-2">
+                <i class="fa-solid fa-chart-column text-emerald-400"></i>
+                Dividende annuel par position
+              </h3>
+              <p class="text-xs text-slate-400">Contribution brute estimée de chaque ligne au revenu annuel</p>
+            </div>
+            <span class="text-xs px-2.5 py-1 rounded-md bg-slate-800 text-slate-300 font-mono hidden sm:inline" id="chartTotalIncomeBadge">0 €</span>
+          </div>
+          <div class="relative h-64 sm:h-72 w-full">
+            <canvas id="barChartIncome"></canvas>
+          </div>
+        </div>
+
+        <!-- Graphique 2: Concentration de l'investissement (Doughnut Chart) -->
+        <div class="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col justify-between">
+          <div>
+            <h3 class="text-base font-semibold text-white flex items-center gap-2">
+              <i class="fa-solid fa-chart-pie text-cyan-400"></i>
+              Concentration de l'investissement
+            </h3>
+            <p class="text-xs text-slate-400 mb-4">Répartition de votre capital investi par société</p>
+          </div>
+          <div class="relative h-60 w-full flex items-center justify-center">
+            <canvas id="donutChartCapital"></canvas>
+          </div>
+          <div class="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-slate-800 text-xs">
+            <div class="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800">
+              <span class="text-slate-400 block text-[11px]">Top 1 Position</span>
+              <span id="quickTop1Invested" class="font-semibold text-slate-200 truncate block">-</span>
+            </div>
+            <div class="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800">
+              <span class="text-slate-400 block text-[11px]">Part Top 3 Revenu</span>
+              <span id="quickTop3Percent" class="font-semibold text-emerald-400 truncate block">-</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Table: Positions & Income -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+        <div class="p-4 sm:p-5 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div class="flex items-center gap-2 flex-wrap">
+              <h2 class="text-lg font-bold text-white">Positions & Income</h2>
+              <span id="positionsCountBadge" class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-mono">0 positions</span>
+              <span id="autoSaveBadge" class="text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full inline-flex items-center gap-1 transition-all">
+                <i class="fa-solid fa-cloud-arrow-up text-[10px]"></i>
+                <span>Sauvegarde auto active</span>
+              </span>
+            </div>
+            <p class="text-xs text-slate-400 mt-0.5">Détail des lignes, rendements sur coût (YoC), dividendes perçus et soldes à recevoir</p>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <div class="relative w-full sm:w-auto">
+              <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-xs text-slate-500"></i>
+              <input type="text" id="searchInput" placeholder="Filtrer ticker, société..." oninput="renderPositionsTable()" class="pl-8 pr-3 py-1.5 bg-slate-800/80 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full sm:w-56">
+            </div>
+            
+            <button onclick="openModal('addPositionModal')" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold shadow-sm transition whitespace-nowrap">
+              <i class="fa-solid fa-plus text-[10px]"></i>
+              <span>+ Action</span>
+            </button>
+
+            <button onclick="openCasaBourseModal()" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600/20 hover:bg-amber-600/30 text-amber-400 border border-amber-500/30 rounded-xl text-xs font-semibold shadow-sm transition whitespace-nowrap">
+              <i class="fa-solid fa-calendar-days text-[11px]"></i>
+              <span>Calendrier BVC (Maroc)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Responsive Table -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs whitespace-nowrap">
+            <thead class="bg-slate-950/70 text-slate-400 border-b border-slate-800 text-[11px] uppercase tracking-wider font-semibold">
+              <tr>
+                <th scope="col" class="py-3 px-4">Société</th>
+                <th scope="col" class="py-3 px-3">Ticker</th>
+                <th scope="col" class="py-3 px-3 text-right">Actions</th>
+                <th scope="col" class="py-3 px-3 text-right">Investi</th>
+                <th scope="col" class="py-3 px-3 text-right">Yield on Cost</th>
+                <th scope="col" class="py-3 px-3 text-right">DPA</th>
+                <th scope="col" class="py-3 px-3 text-right">Revenu Annuel</th>
+                <th scope="col" class="py-3 px-3 text-right">Reçu</th>
+                <th scope="col" class="py-3 px-3 text-right">À recevoir</th>
+                <th scope="col" class="py-3 px-4 text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="positionsTableBody" class="divide-y divide-slate-800/60 text-slate-200">
+              <!-- Injected via JavaScript -->
+            </tbody>
+            <!-- Table Footer Totals -->
+            <tfoot class="bg-slate-950 text-slate-200 font-semibold border-t-2 border-slate-800 text-xs">
+              <tr id="tableTotalsRow">
+                <td class="py-3 px-4 text-white font-bold" colspan="2">TOTAL GÉNÉRAL</td>
+                <td class="py-3 px-3 text-right font-mono" id="footTotalShares">-</td>
+                <td class="py-3 px-3 text-right font-mono text-white font-bold" id="footTotalInvested">0 €</td>
+                <td class="py-3 px-3 text-right font-mono text-cyan-400 font-bold" id="footAvgYield">0.00 %</td>
+                <td class="py-3 px-3 text-right text-slate-500">-</td>
+                <td class="py-3 px-3 text-right font-mono text-emerald-400 font-bold" id="footTotalIncome">0 €</td>
+                <td class="py-3 px-3 text-right font-mono text-indigo-400 font-bold" id="footTotalReceived">0 €</td>
+                <td class="py-3 px-3 text-right font-mono text-amber-400 font-bold" id="footTotalPending">0 €</td>
+                <td class="py-3 px-4 text-center text-slate-500"></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <div class="p-3 bg-slate-950/40 border-t border-slate-800/60 text-[11px] text-slate-400 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-circle-info text-sky-400"></i>
+            <span><strong>Note :</strong> La colonne <em>Reçu</em> indique les dividendes réels crédités par votre courtier ou banque.</span>
+          </div>
+          <div class="flex items-center gap-4 text-slate-500">
+            <span>DPA = Dividende Par Action</span>
+            <span>YoC = (DPA × Actions) / Investi</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Projection Section (5 / 10 / 20 ans) -->
+      <div id="sectionProjections" class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-sm space-y-6">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+          <div>
+            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+              <i class="fa-solid fa-rocket text-amber-400"></i>
+              Income Projection — Horizon 5 / 10 / 20 ans
+            </h2>
+            <p class="text-xs text-slate-400 mt-0.5">Simulation de vos rentes avec versements programmés et réinvestissement (effet DRIP)</p>
+          </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 bg-slate-950/60 p-4 rounded-xl border border-slate-800">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center justify-between">
+              <span>Ajout chaque mois</span>
+              <span id="labelMonthlyAdd" class="text-emerald-400 font-mono font-bold">200 €</span>
+            </label>
+            <input type="range" id="inputMonthlyAdd" min="0" max="3000" step="25" value="200" oninput="updateProjection()" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500">
+            <div class="flex justify-between text-[10px] text-slate-500 mt-1 font-mono">
+              <span>0 €</span>
+              <span>1500 €</span>
+              <span>3000 €</span>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center justify-between">
+              <span>Yield nouvel argent</span>
+              <span id="labelNewYield" class="text-cyan-400 font-mono font-bold">5.00 %</span>
+            </label>
+            <input type="range" id="inputNewYield" min="1" max="15" step="0.25" value="5.0" oninput="updateProjection()" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-500">
+            <div class="flex justify-between text-[10px] text-slate-500 mt-1 font-mono">
+              <span>1%</span>
+              <span>7%</span>
+              <span>15%</span>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center justify-between">
+              <span>Croissance dividende (DGR)</span>
+              <span id="labelDivGrowth" class="text-purple-400 font-mono font-bold">5.00 %</span>
+            </label>
+            <input type="range" id="inputDivGrowth" min="0" max="12" step="0.5" value="5.0" oninput="updateProjection()" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-purple-500">
+            <div class="flex justify-between text-[10px] text-slate-500 mt-1 font-mono">
+              <span>0%</span>
+              <span>6%</span>
+              <span>12%</span>
+            </div>
+          </div>
+
+          <div class="flex flex-col justify-center">
+            <label class="block text-xs font-semibold text-slate-300 mb-2">Stratégie Dividendes</label>
+            <label class="relative flex items-center cursor-pointer">
+              <input type="checkbox" id="inputReinvest" checked onchange="updateProjection()" class="sr-only peer">
+              <div class="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+              <span class="ml-3 text-xs font-medium text-slate-200">Réinvestir (DRIP)</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Projection Table & Line Chart -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+          <div class="lg:col-span-6 overflow-hidden rounded-xl border border-slate-800 bg-slate-950/70">
+            <table class="w-full text-left text-xs whitespace-nowrap">
+              <thead class="bg-slate-900 text-slate-400 border-b border-slate-800 text-[11px] uppercase tracking-wider font-semibold">
+                <tr>
+                  <th class="py-3 px-3">Horizon</th>
+                  <th class="py-3 px-3 text-right">Années</th>
+                  <th class="py-3 px-3 text-right">Capital ajouté</th>
+                  <th class="py-3 px-3 text-right">Revenu annuel</th>
+                  <th class="py-3 px-3 text-right">Revenu mensuel</th>
+                  <th class="py-3 px-3 text-right">Portefeuille</th>
+                </tr>
+              </thead>
+              <tbody id="projectionTableBody" class="divide-y divide-slate-800/60 font-mono text-slate-300">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+
+          <div class="lg:col-span-6 bg-slate-950/50 p-4 rounded-xl border border-slate-800">
+            <div class="flex items-center justify-between mb-2">
+              <h4 class="text-xs font-semibold text-slate-300">Trajectoire 0 à 20 ans</h4>
+              <div class="flex items-center gap-3 text-[11px] font-mono">
+                <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>Dividendes</span>
+                <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-sky-500"></span>Portefeuille</span>
+              </div>
+            </div>
+            <div class="relative h-60 w-full">
+              <canvas id="lineChartProjection"></canvas>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Historique des Dividendes Reçus -->
+      <div id="sectionHistory" class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-sm space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+              <i class="fa-solid fa-receipt text-indigo-400"></i>
+              Journal des Dividendes Reçus
+            </h3>
+            <p class="text-xs text-slate-400">Historique des encaissements effectifs</p>
+          </div>
+          <button onclick="openModal('recordDividendModal')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition">
+            <i class="fa-solid fa-plus text-[10px]"></i>
+            <span>Nouveau versement</span>
+          </button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs whitespace-nowrap">
+            <thead class="bg-slate-950/70 text-slate-400 border-b border-slate-800 text-[11px] uppercase tracking-wider font-semibold">
+              <tr>
+                <th class="py-2.5 px-4">Date</th>
+                <th class="py-2.5 px-4">Ticker / Société</th>
+                <th class="py-2.5 px-4 text-right">Montant crédité</th>
+                <th class="py-2.5 px-4">Note / Référence</th>
+                <th class="py-2.5 px-4 text-center">Action</th>
+              </tr>
+            </thead>
+            <tbody id="dividendsHistoryTableBody" class="divide-y divide-slate-800/60 text-slate-300">
+              <!-- Injected via JavaScript -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-800 bg-slate-900/60 py-4 mt-8 text-center text-xs text-slate-500">
+      <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+        <p>Dividend Tracker Pro &copy; 2026 — Multi-utilisateurs & Mobile PWA</p>
+        <div class="flex items-center gap-3">
+          <span class="flex items-center gap-1 text-emerald-400"><i class="fa-solid fa-shield-halved"></i> Données sécurisées</span>
+          <span>•</span>
+          <button onclick="exportDataJSON()" class="hover:text-slate-300 underline">Exporter mes données</button>
+        </div>
+      </div>
+    </footer>
+
+    <!-- ==================================================== -->
+    <!-- 3. MOBILE BOTTOM NAVIGATION (Optimisé pour smartphone) -->
+    <!-- ==================================================== -->
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-lg border-t border-slate-800 py-2 px-3 flex items-center justify-around shadow-2xl">
+      <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="flex flex-col items-center gap-1 text-slate-400 hover:text-emerald-400">
+        <i class="fa-solid fa-table-list text-base"></i>
+        <span class="text-[10px] font-medium">Positions</span>
+      </button>
+
+      <button onclick="openModal('addPositionModal')" class="flex flex-col items-center gap-1 text-emerald-400">
+        <div class="w-9 h-9 rounded-full bg-emerald-600 text-white flex items-center justify-center -mt-4 shadow-lg shadow-emerald-600/40">
+          <i class="fa-solid fa-plus text-sm"></i>
+        </div>
+        <span class="text-[10px] font-bold">Action</span>
+      </button>
+
+      <button onclick="openModal('buySharesModal')" class="flex flex-col items-center gap-1 text-slate-400 hover:text-sky-400">
+        <i class="fa-solid fa-cart-shopping text-base"></i>
+        <span class="text-[10px] font-medium">Acheter</span>
+      </button>
+
+      <button onclick="openModal('recordDividendModal')" class="flex flex-col items-center gap-1 text-slate-400 hover:text-indigo-400">
+        <i class="fa-solid fa-hand-holding-dollar text-base"></i>
+        <span class="text-[10px] font-medium">Dividende</span>
+      </button>
+
+      <button onclick="scrollToElement('sectionProjections')" class="flex flex-col items-center gap-1 text-slate-400 hover:text-amber-400">
+        <i class="fa-solid fa-rocket text-base"></i>
+        <span class="text-[10px] font-medium">Projections</span>
+      </button>
+    </nav>
+
+  </div>
+
+
+  <!-- ==================== MODALS ==================== -->
+
+  <!-- Modal 1: Ajouter / Modifier une Position -->
+  <div id="addPositionModal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div class="p-5 border-b border-slate-800 flex items-center justify-between">
+        <h3 id="positionModalTitle" class="text-base font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-plus-circle text-emerald-400"></i>
+          Ajouter une Position
+        </h3>
+        <button onclick="closeModal('addPositionModal')" class="text-slate-400 hover:text-white transition">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="positionForm" onsubmit="handleSavePosition(event)" class="p-5 space-y-4">
+        <input type="hidden" id="editPositionId" value="">
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Nom Société *</label>
+            <input type="text" id="posCompany" list="casaBourseDatalist" oninput="onSelectCasaBourseCompany(event)" required placeholder="ex: Cosumar" class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <datalist id="casaBourseDatalist"></datalist>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Ticker / Symbole *</label>
+            <input type="text" id="posTicker" required placeholder="ex: CSR" class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 uppercase focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Nombre d'Actions *</label>
+            <input type="number" id="posShares" required step="any" min="0" placeholder="ex: 15" class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Montant Total Investi *</label>
+            <input type="number" id="posInvested" required step="any" min="0" placeholder="ex: 950.00" class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">DPA (Dividende / Action) *</label>
+            <input type="number" id="posDpa" required step="any" min="0" placeholder="ex: 3.20" class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <span class="text-[10px] text-slate-500">Montant annuel par titre</span>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Déjà Reçu cette année</label>
+            <input type="number" id="posReceived" step="any" min="0" placeholder="0.00" class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          </div>
+        </div>
+
+        <div class="pt-3 border-t border-slate-800 flex justify-end gap-3">
+          <button type="button" onclick="closeModal('addPositionModal')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold transition">
+            Annuler
+          </button>
+          <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold shadow-md shadow-emerald-600/20 transition">
+            Enregistrer la Position
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 2: Acheter des Actions -->
+  <div id="buySharesModal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div class="p-5 border-b border-slate-800 flex items-center justify-between">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-cart-plus text-sky-400"></i>
+          Acheter des Actions
+        </h3>
+        <button onclick="closeModal('buySharesModal')" class="text-slate-400 hover:text-white transition">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="buySharesForm" onsubmit="handleBuyShares(event)" class="p-5 space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Sélectionner l'action existante</label>
+          <select id="buyPositionSelect" required class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:ring-2 focus:ring-sky-500">
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Actions achetées *</label>
+            <input type="number" id="buySharesCount" required step="any" min="0.001" placeholder="ex: 5" class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Prix par action *</label>
+            <input type="number" id="buySharePrice" required step="any" min="0" placeholder="ex: 62.50" oninput="calculateBuyTotal()" class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Frais de courtage</label>
+            <input type="number" id="buyFees" step="any" min="0" placeholder="0.00" value="0" oninput="calculateBuyTotal()" class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Total Montant Ajouté</label>
+            <input type="text" id="buyTotalAmountDisplay" readonly value="0.00" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-sky-400 font-mono font-bold focus:outline-none">
+          </div>
+        </div>
+
+        <div class="p-3 bg-sky-950/30 border border-sky-800/40 rounded-xl text-[11px] text-sky-300">
+          <i class="fa-solid fa-calculator mr-1"></i>
+          Le capital investi sera incrémenté et votre <strong>Yield on Cost</strong> automatiquement recalculé.
+        </div>
+
+        <div class="pt-3 border-t border-slate-800 flex justify-end gap-3">
+          <button type="button" onclick="closeModal('buySharesModal')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold transition">
+            Annuler
+          </button>
+          <button type="submit" class="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-semibold shadow-md shadow-sky-600/20 transition">
+            Confirmer l'Achat
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 3: Encaisser un Dividende -->
+  <div id="recordDividendModal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div class="p-5 border-b border-slate-800 flex items-center justify-between">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-hand-holding-dollar text-indigo-400"></i>
+          Encaisser un Dividende Reçu
+        </h3>
+        <button onclick="closeModal('recordDividendModal')" class="text-slate-400 hover:text-white transition">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="recordDividendForm" onsubmit="handleRecordDividend(event)" class="p-5 space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Position / Action *</label>
+          <select id="divPositionSelect" required class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Montant perçu *</label>
+            <input type="number" id="divAmount" required step="any" min="0.01" placeholder="ex: 45.20" class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Date d'encaissement *</label>
+            <input type="date" id="divDate" required class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Remarque / Référence bancaire (optionnel)</label>
+          <input type="text" id="divNote" placeholder="ex: Dividende T3 / Acompte trimestriel" class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+
+        <div class="pt-3 border-t border-slate-800 flex justify-end gap-3">
+          <button type="button" onclick="closeModal('recordDividendModal')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold transition">
+            Annuler
+          </button>
+          <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow-md shadow-indigo-600/20 transition">
+            Enregistrer le Paiement
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 4: Vérification Code Email OTP -->
+  <div id="verifyOtpModal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full shadow-2xl overflow-hidden p-6 sm:p-8 space-y-6 text-center animate-in fade-in zoom-in-95 duration-200">
+      
+      <div class="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto text-2xl shadow-inner">
+        <i class="fa-solid fa-envelope-circle-check"></i>
+      </div>
+
+      <div class="space-y-1.5">
+        <h3 class="text-xl font-bold text-white">Vérifiez votre boîte mail</h3>
+        <p class="text-xs text-slate-400">
+          Un code de validation à 6 chiffres a été envoyé à l'adresse :<br>
+          <span id="otpTargetEmail" class="font-mono text-emerald-400 font-bold text-xs mt-1 block"></span>
+        </p>
+      </div>
+
+      <!-- Affichage direct du code sécurisé -->
+      <div class="p-3 bg-emerald-950/40 border border-emerald-500/40 rounded-2xl text-center space-y-0.5">
+        <span class="text-[11px] text-slate-300">Code de validation sécurisé :</span>
+        <div class="text-2xl font-mono font-extrabold text-emerald-400 tracking-widest" id="otpCodeLiveDisplay">------</div>
+        <p class="text-[10px] text-slate-400">Envoyé vers votre boîte mail. Vous pouvez le saisir directement ci-dessous.</p>
+      </div>
+
+      <!-- Saisie des 6 chiffres OTP -->
+      <div>
+        <label class="block text-xs font-semibold text-slate-300 mb-3">Entrez votre code de sécurité</label>
+        <div class="flex justify-center gap-2 sm:gap-3" id="otpInputsContainer">
+          <input type="text" maxlength="1" inputmode="numeric" class="otp-input w-11 h-12 text-center text-xl font-mono font-bold bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-emerald-500" data-idx="0">
+          <input type="text" maxlength="1" inputmode="numeric" class="otp-input w-11 h-12 text-center text-xl font-mono font-bold bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-emerald-500" data-idx="1">
+          <input type="text" maxlength="1" inputmode="numeric" class="otp-input w-11 h-12 text-center text-xl font-mono font-bold bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-emerald-500" data-idx="2">
+          <input type="text" maxlength="1" inputmode="numeric" class="otp-input w-11 h-12 text-center text-xl font-mono font-bold bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-emerald-500" data-idx="3">
+          <input type="text" maxlength="1" inputmode="numeric" class="otp-input w-11 h-12 text-center text-xl font-mono font-bold bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-emerald-500" data-idx="4">
+          <input type="text" maxlength="1" inputmode="numeric" class="otp-input w-11 h-12 text-center text-xl font-mono font-bold bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-emerald-500" data-idx="5">
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="space-y-3">
+        <button onclick="handleVerifyOtpCode()" class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/30 transition flex items-center justify-center gap-2">
+          <i class="fa-solid fa-check"></i>
+          <span>Valider & Activer mon Portefeuille</span>
+        </button>
+
+        <div class="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-slate-800">
+          <button onclick="resendOtpCode()" class="hover:text-emerald-400 transition font-medium">
+            <i class="fa-solid fa-rotate-right mr-1"></i> Renvoyer le code
+          </button>
+          <button onclick="cancelOtpVerification()" class="hover:text-rose-400 transition">
+            Annuler
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Modal 5: Changer mot de passe pour utilisateur connecté -->
+  <div id="changePasswordModal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full shadow-2xl overflow-hidden p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-key text-amber-400"></i>
+          Changer mon mot de passe
+        </h3>
+        <button onclick="closeModal('changePasswordModal')" class="text-slate-400 hover:text-white transition">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="changePasswordForm" onsubmit="handleUserPasswordChange(event)" class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Nouveau mot de passe *</label>
+          <input type="password" id="userNewPasswordInput" required minlength="4" placeholder="••••••••" class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:ring-2 focus:ring-amber-500">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Confirmer le mot de passe *</label>
+          <input type="password" id="userConfirmPasswordInput" required minlength="4" placeholder="••••••••" class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:ring-2 focus:ring-amber-500">
+        </div>
+
+        <div class="pt-2 border-t border-slate-800 flex justify-end gap-3">
+          <button type="button" onclick="closeModal('changePasswordModal')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold transition">
+            Annuler
+          </button>
+          <button type="submit" class="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-semibold shadow-md shadow-amber-600/20 transition">
+            Mettre à jour
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 6: Configuration des Emails Réels (EmailJS / Resend / Web3Forms) -->
+  <div id="emailConfigModal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-envelope-circle-check text-sky-400"></i>
+          Configuration de l'envoi d'emails réels
+        </h3>
+        <button onclick="closeModal('emailConfigModal')" class="text-slate-400 hover:text-white transition">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <p class="text-xs text-slate-300">
+        Pour que les codes soient <strong>réellement envoyés dans votre boîte Gmail</strong> depuis le web, connectez votre service gratuit (EmailJS ou Web3Forms) :
+      </p>
+
+      <form id="emailConfigForm" onsubmit="handleSaveEmailConfig(event)" class="space-y-3 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Méthode choisie</label>
+          <select id="cfgEmailProvider" onchange="toggleEmailConfigFields()" class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white">
+            <option value="emailjs">EmailJS (Recommandé - Envoi direct via votre Gmail)</option>
+            <option value="web3forms">Web3Forms (Simple clé d'accès)</option>
+          </select>
+        </div>
+
+        <div id="emailjsFields" class="space-y-2.5">
+          <div>
+            <label class="block font-semibold text-slate-300 mb-0.5">Public Key (EmailJS)</label>
+            <input type="text" id="cfgEmailJsPublicKey" placeholder="ex: user_xxxxxxxxxxxxx" class="w-full px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-xl text-white">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-300 mb-0.5">Service ID</label>
+            <input type="text" id="cfgEmailJsServiceId" placeholder="ex: service_gmail" class="w-full px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-xl text-white">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-300 mb-0.5">Template ID</label>
+            <input type="text" id="cfgEmailJsTemplateId" placeholder="ex: template_otp" class="w-full px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-xl text-white">
+          </div>
+        </div>
+
+        <div id="web3formsFields" class="space-y-2.5 hidden">
+          <div>
+            <label class="block font-semibold text-slate-300 mb-0.5">Access Key (Web3Forms)</label>
+            <input type="text" id="cfgWeb3FormsKey" placeholder="ex: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" class="w-full px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-xl text-white">
+          </div>
+        </div>
+
+        <div class="p-3 bg-sky-950/30 border border-sky-800/40 rounded-xl text-[11px] text-sky-300">
+          <i class="fa-solid fa-circle-info mr-1"></i>
+          Gratuit sur <a href="https://www.emailjs.com" target="_blank" class="underline font-bold text-white">emailjs.com</a> (200 emails gratuits/mois). Vos identifiants sont sauvegardés dans votre navigateur.
+        </div>
+
+        <div class="pt-2 border-t border-slate-800 flex justify-end gap-3">
+          <button type="button" onclick="closeModal('emailConfigModal')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-semibold transition">
+            Fermer
+          </button>
+          <button type="submit" class="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl font-semibold shadow-md shadow-sky-600/20 transition">
+            Enregistrer & Activer
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 7: Calendrier Officiel Bourse de Casablanca (CasaBourse) -->
+  <div id="casaBourseModal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-4xl w-full shadow-2xl overflow-hidden p-5 sm:p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div>
+          <h3 class="text-base font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-calendar-check text-amber-400"></i>
+            Calendrier Officiel des Dividendes 2026 (BVC)
+          </h3>
+          <p class="text-xs text-slate-400">Données officielles de la Bourse de Casablanca (CasaBourse / AMMC)</p>
+        </div>
+        <button onclick="closeModal('casaBourseModal')" class="text-slate-400 hover:text-white transition">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <div class="relative flex-1">
+          <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-xs text-slate-500"></i>
+          <input type="text" id="casaBourseSearchInput" placeholder="Rechercher une société marocaine (Cosumar, Akdital, Attijari, TGCC, Vicenne...)" oninput="filterCasaBourseCalendar()" class="w-full pl-9 pr-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500">
+        </div>
+        <span class="text-xs text-slate-400 font-mono hidden sm:inline" id="casaBourseCountBadge">59 sociétés</span>
+      </div>
+
+      <div class="overflow-y-auto flex-1 border border-slate-800 rounded-xl">
+        <table class="w-full text-left text-xs whitespace-nowrap">
+          <thead class="bg-slate-950 text-slate-400 sticky top-0 border-b border-slate-800 text-[11px] uppercase tracking-wider font-semibold">
+            <tr>
+              <th class="py-2.5 px-3">Société</th>
+              <th class="py-2.5 px-2">Ticker</th>
+              <th class="py-2.5 px-3 text-right">DPA Brut</th>
+              <th class="py-2.5 px-3 text-right">Rendement</th>
+              <th class="py-2.5 px-3">Détachement</th>
+              <th class="py-2.5 px-3">Paiement</th>
+              <th class="py-2.5 px-3 text-center">Action</th>
+            </tr>
+          </thead>
+          <tbody id="casaBourseTableBody" class="divide-y divide-slate-800/60 text-slate-200">
+            <!-- Injected via JavaScript -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pt-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-500">
+        <p><i class="fa-solid fa-circle-check text-emerald-400 mr-1"></i> Cliquez sur « + Ajouter » pour importer instantanément une valeur avec son DPA officiel.</p>
+        <button onclick="closeModal('casaBourseModal')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-semibold transition">
+          Fermer
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification System -->
+  <div id="toastContainer" class="fixed bottom-16 md:bottom-5 right-5 z-50 space-y-2 pointer-events-none"></div>
+
+  <!-- EmailJS Browser SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+  <!-- Application Logic -->
+  <script src="cloud-config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
